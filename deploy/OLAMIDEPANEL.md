@@ -95,3 +95,6 @@ The report includes prior document roots, active release, changed configuration 
 ansible-playbook -i deploy/inventory.ini deploy/olamidepanel.yml --syntax-check
 python3 -m unittest discover -s deploy/tests -v
 ```
+
+### Reload readiness diagnostics
+Nginx reload acknowledgement can precede activation of new workers. The installer now retries named-route checks up to 20 times and still requires exact release headers and asset hashes. It verifies that the dedicated vhost is loaded by the active Nginx include configuration. On failure, `health.last_failure` records the HTTP status, redirect location, release header and expected/received hashes without logging page contents. A persistent mismatch still triggers rollback.

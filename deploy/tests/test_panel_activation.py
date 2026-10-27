@@ -38,4 +38,37 @@ class DomainRoutingTests(unittest.TestCase):
         text='server {server_name '+a.DOMAIN+'; location / { proxy_set_header X ${variable}; }}'
         self.assertEqual(a.plan_file(text)[3],1)
 
+
+class ReloadReadinessTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.tmp=tempfile.TemporaryDirectory()
+        self.root=Path(self.tmp.name)
+        for name in a.ASSETS:
+            p=self.root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(('fixture:'+name).encode())
+        self.revision='a'*40
+    def tearDown(self):self.tmp.cleanup()
+    def test_stale_worker_response_then_ready(self):
+        calls=[]
+        def fetch(name,tls):
+            calls.append(name)
+            if len(calls)==1:return 404,{},b'old worker'
+            return 200,{'x-epa-release':self.revision},(self.root/name).read_bytes()
+        diag={}
+        a.verify_assets(self.root,self.revision,False,diag,attempts=3,delay=0,fetch=fetch)
+        self.assertEqual(diag['attempt'],2)
+        self.assertEqual(diag['verified_assets'],len(a.ASSETS))
+    def test_wrong_release_is_rejected_with_diagnostics(self):
+        diag={}
+        def fetch(name,tls):return 200,{'x-epa-release':'old'},(self.root/name).read_bytes()
+        with self.assertRaisesRegex(RuntimeError,'release_header'):
+            a.verify_assets(self.root,self.revision,False,diag,attempts=2,delay=0,fetch=fetch)
+        self.assertEqual(diag['attempt'],2)
+        self.assertEqual(diag['last_failure']['release_header'],'old')
+    def test_correct_header_cannot_mask_wrong_content(self):
+        diag={}
+        def fetch(name,tls):return 200,{'x-epa-release':self.revision},b'wrong game'
+        with self.assertRaisesRegex(RuntimeError,'received_sha256'):
+            a.verify_assets(self.root,self.revision,False,diag,attempts=1,delay=0,fetch=fetch)
+
 if __name__=='__main__':unittest.main()

@@ -150,6 +150,42 @@ def fetch_local(path, tls=False):
     finally:con.close()
 
 
+
+def verify_assets(release, revision, tls, diagnostics, attempts=20, delay=0.35, fetch=None):
+    """Reload is asynchronous; require the actual route and bytes, not a fixed sleep."""
+    fetch = fetch or fetch_local
+    expected = {name: hashlib.sha256((release/name).read_bytes()).hexdigest() for name in ASSETS}
+    for attempt in range(1, attempts+1):
+        failure = None
+        for name in ASSETS:
+            try:
+                status, headers, body = fetch(name, tls)
+                digest = hashlib.sha256(body).hexdigest()
+                if status != 200 or headers.get('x-epa-release') != revision or digest != expected[name]:
+                    failure = {'path': '/'+name, 'status': status,
+                               'release_header': headers.get('x-epa-release'),
+                               'location': headers.get('location'), 'response_bytes': len(body),
+                               'expected_sha256': expected[name], 'received_sha256': digest}
+                    break
+            except (OSError, ssl.SSLError) as error:
+                failure = {'path': '/'+name, 'error_type': type(error).__name__, 'message': str(error)}
+                break
+        if failure is None and tls:
+            try:
+                status, headers, _ = fetch('index.html', False)
+                if status != 301 or headers.get('location') != 'https://'+DOMAIN+'/index.html':
+                    failure = {'path':'/index.html', 'check':'HTTP redirect', 'status':status, 'location':headers.get('location')}
+            except OSError as error:
+                failure = {'check':'HTTP redirect', 'error_type':type(error).__name__, 'message':str(error)}
+        diagnostics.update({'attempt':attempt, 'maximum_attempts':attempts, 'last_failure':failure})
+        if failure is None:
+            diagnostics['verified_assets'] = len(ASSETS)
+            return
+        if attempt < attempts:
+            time.sleep(delay)
+    raise RuntimeError('Routing/content verification failed: '+json.dumps(diagnostics['last_failure']))
+
+
 def panel_connection(root):
     for p in [root,root/'panel',root/'panel/database.py']:
         info=p.stat()
@@ -242,16 +278,15 @@ def main(config):
             for p,text in changes.items():atomic(p,text,modes.get(str(p),0o644))
             atomic(managed,render(link,revision,cert))
             run(['nginx','-t'])
+            applied_dump=run(['nginx','-T'])
+            loaded_paths=re.findall(r'^# configuration file (.+):$',applied_dump.stdout+'\n'+applied_dump.stderr,re.M)
+            if str(managed) not in [str(Path(p).resolve()) for p in loaded_paths]:
+                raise ValueError('The active nginx.conf does not include /etc/nginx/conf.d/epa-festival.conf. Enable that include in the panel Nginx configuration.')
+            report['vhost_loaded']=True
             switch(release,link);activated=True
             run(['systemctl','start','nginx']);run(['systemctl','reload','nginx'])
-            for name in ASSETS:
-                status,headers,body=fetch_local(name,bool(cert))
-                expected=(release/name).read_bytes()
-                if status!=200 or headers.get('x-epa-release')!=revision or hashlib.sha256(body).digest()!=hashlib.sha256(expected).digest():
-                    raise RuntimeError('Routing/content verification failed for /'+name)
-            if cert:
-                status,headers,_=fetch_local('index.html')
-                if status!=301 or headers.get('location')!='https://'+DOMAIN+'/index.html':raise RuntimeError('HTTP to HTTPS redirect verification failed')
+            report['health']={}
+            verify_assets(release,revision,bool(cert),report['health'])
             if domain_id is None:
                 cursor=db.execute('INSERT INTO domains(owner,name,created) VALUES(?,?,?)',(users[0]['id'],DOMAIN,int(time.time())))
                 domain_id=cursor.lastrowid

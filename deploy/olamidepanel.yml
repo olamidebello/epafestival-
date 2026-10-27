@@ -17,6 +17,9 @@
     - name: Check existing panel and Nginx runtime paths
       ansible.builtin.stat:
         path: '{{ item }}'
+        get_checksum: false
+        get_mime: false
+        get_attributes: false
       loop:
         - '{{ epa_panel_root }}/panel/database.py'
         - '{{ epa_panel_root }}/venv/bin/python'
@@ -28,6 +31,8 @@
         that: item.stat.exists
         fail_msg: Run on the existing Olamidepanel server; this does not install or replace the panel.
       loop: '{{ panel_paths.results }}'
+      loop_control:
+        label: '{{ item.item }}'
     - name: Ensure Git and CA certificates are installed
       ansible.builtin.apt:
         name: [git, ca-certificates, iproute2]
