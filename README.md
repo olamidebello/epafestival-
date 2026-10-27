@@ -29,3 +29,5 @@ The repair playbook updates Epa's African Apps Store listing automatically if `a
 
 ## Oro-Ago language workspace
 The Language menu offers English and an Oro-Ago option with an explicit English fallback while authentic local wording is pending. It exports a text template for community translation and accepts a local, text-only JSON pack with named, source-supplied review. No dialect wording is invented, standard Yoruba is not substituted, and file-declared review is not independently authenticated. Partial packs retain English for untranslated text; imported language files stay on the device. Reviewed cultural stories and pronunciation still require local speakers/custodians.
+
+New guest sessions default to the Oro-Ago language selection. Explicit language choices are preserved. Until a reviewed community pack supplies translations, English is visibly identified as the fallback.

@@ -20,8 +20,8 @@
     explore:'[data-tab="explore"]',drum:'[data-tab="drum"]',dance:'[data-tab="dance"]',prepare:'[data-tab="prepare"]',workshop:'[data-tab="workshop"]',
     terms:'.legal-links a[href="terms.html"]',privacy:'.legal-links a[href="privacy.html"]',copyright:'.legal-links a[href="copyright.html"]',
     savePlayer:'#savesettings',tutorial:'#tutorial',exportSave:'#backup'};
-  let locale='en',pack=null;
-  try{locale=localStorage.getItem('epa-language')||'en';const raw=localStorage.getItem('epa-language-pack');if(raw)pack=validate(JSON.parse(raw));}catch{}
+  let locale='oro-ago',pack=null;
+  try{locale=localStorage.getItem('epa-language')||'oro-ago';const raw=localStorage.getItem('epa-language-pack');if(raw)pack=validate(JSON.parse(raw));}catch{}
   function validate(v){
     if(!v||v.locale!=='oro-ago'||!v.strings||typeof v.strings!=='object'||Array.isArray(v.strings))throw Error('Use an Oro-Ago language pack.');
     if(v.review?.status!=='approved'||typeof v.review?.reviewer!=='string'||!v.review.reviewer.trim())throw Error('A local speaker must supply their name and mark the translation reviewed before importing.');
