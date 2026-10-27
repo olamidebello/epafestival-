@@ -59,3 +59,41 @@
     - name: Show public HTTPS result
       ansible.builtin.debug:
         var: epa_public_result.stdout
+
+- name: Add Epa to an existing African Apps Store on this host
+  hosts: epa_servers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Detect existing store service without exposing its environment
+      ansible.builtin.command:
+        argv: [systemctl, show, africanappsstore.service, -p, LoadState, --value]
+      register: epa_store_service
+      changed_when: false
+      failed_when: false
+    - name: Synchronize Epa listing when the store is installed here
+      when: epa_store_service.stdout | trim == 'loaded' and epa_update_store | default(true) | bool
+      block:
+        - name: Pull current Apps Store integration tools
+          ansible.builtin.git:
+            repo: https://github.com/olamidebello/africanappsstore.git
+            dest: /opt/epa-festival-store/source
+            version: main
+            force: false
+        - name: Update only Epa listing and its install button with backups
+          ansible.builtin.command:
+            argv: [python3, /opt/epa-festival-store/source/tools/install_epa.py, --discover]
+          register: epa_store_result
+          changed_when: true
+        - name: Verify Epa listing through public store API
+          ansible.builtin.uri:
+            url: https://africanappsstore.space/api/hosted-apps
+            return_content: true
+            status_code: 200
+            validate_certs: true
+          register: epa_store_catalog
+        - name: Require the Epa install listing to be visible
+          ansible.builtin.assert:
+            that:
+              - epa_store_catalog.json | selectattr('domain', 'equalto', 'epafestival.africandroid.world') | list | length == 1
+            fail_msg: Epa listing is missing or hidden. Check existing store administrator visibility settings.

@@ -21,3 +21,8 @@ The living 2D square adds movement, day/night/weather, character styling and sav
 Run `sudo bash scripts/deploy-olamidepanel.sh` from an updated checkout on the panel server. See [deployment paths and port handling](deploy/OLAMIDEPANEL.md). The dedicated playbook reuses existing domain certificates and coordinates with the panel publisher; it does not require a separate application port.
 
 For automatic HTTP/HTTPS routing and certificate repair on the existing panel server, run `bash scripts/repair-olamidepanel.sh` as root. See [repair documentation](deploy/OLAMIDEPANEL.md#one-command-http--https-repair) for DNS requirements and diagnostic reports.
+
+## Mobile installation and legal pages
+The installable mobile web app supports compatible Android browsers, Safari home-screen installation on iPhone/iPad, and desktop browser installation. This is a PWA, not a native APK or App Store release. The live server install page is `https://epafestival.africandroid.world/install.html`; HTTPS must be configured first. The game footer links to installation, Terms and Conditions, Privacy Policy, and Copyright. The copyright holder is Olamide Olatayo Bello.
+
+The repair playbook updates Epa's African Apps Store listing automatically if `africanappsstore.service` exists on the same host. Existing accounts and other catalog entries are preserved. Run it on the store host separately if the store is hosted elsewhere. The listing is an installable web app and provides no fabricated APK download.
