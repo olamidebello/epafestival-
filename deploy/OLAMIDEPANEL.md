@@ -128,3 +128,14 @@ The current release includes `/install.html`, install logic, 192/512 app icons a
 
 ### Repair only the store listing
 If the game/HTTPS deployment passed but the catalog visibility check failed, run `git -C /opt/epa-festival-store/source pull --ff-only`, then `python3 /opt/epa-festival-store/source/tools/install_epa.py --discover --publish --verify-public`. The installer reads the running service’s effective STORE_DATA/PORT environment, including EnvironmentFile values, verifies its local catalog, and then checks a fresh public API response. It backs up the chosen database and affects only the Epa row.
+
+## Separate store server (current deployment topology)
+The game and African Apps Store are hosted on different servers. Store synchronization from the game playbook is now disabled by default (`epa_update_store=false`). Keep game updates on the game server. Run this separate command on the **Apps Store server**:
+
+```bash
+apt-get update
+apt-get install -y git ansible python3
+ansible-pull -U https://github.com/olamidebello/africanappsstore.git -C main -d /opt/epa-festival-store/source -i localhost, -c local ansible/deploy-epa.yml
+```
+
+That playbook discovers the existing running `africanappsstore.service`, backs up its real database/frontend, publishes only Epa's catalog row, and verifies both the local service and the public store API. It does not require Olamidepanel, a game checkout, or game assets on the store server. It retains store accounts, other listings, existing ports and TLS configuration. Use sudo if you are not root. Existing manually customized Git checkouts may require resolving local edits before pulling.

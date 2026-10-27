@@ -43,3 +43,6 @@ bash /opt/epa-festival-deployer/scripts/pull-and-deploy.sh
 The script delegates to the existing locked repair workflow: install required deployment tools, pull current source, stage public files, repair the Epa-only Nginx route, obtain/retain its HTTPS certificate, verify the game, and publish the Epa store listing if African Apps Store runs on the same host. Existing backups, rollback and diagnostics remain in effect. It does not invent missing Ìgbómìnà translations; the visible English fallback remains until reviewed local wording is supplied.
 
 For direct Ansible use, run `ansible-playbook -i deploy/inventory.ini deploy/pull-and-deploy.yml` from the repository. The default inventory runs locally, so execute it on the actual server or supply your SSH inventory.
+
+## Separate Apps Store server
+African Apps Store runs on a separate server. Game deployment therefore leaves store synchronization disabled by default. Update the game on its Olamidepanel server with `scripts/pull-and-deploy.sh`. On the **Apps Store server**, use the store repository's `ansible/deploy-epa.yml` through `ansible-pull` as documented in `deploy/OLAMIDEPANEL.md`. No game files or Nginx routes are copied to the store server; only Epa's catalog row and install-button integration are updated.

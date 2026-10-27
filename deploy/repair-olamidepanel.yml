@@ -72,7 +72,7 @@
       changed_when: false
       failed_when: false
     - name: Synchronize Epa listing when the store is installed here
-      when: epa_store_service.stdout | trim == 'loaded' and epa_update_store | default(true) | bool
+      when: epa_store_service.stdout | trim == 'loaded' and epa_update_store | default(false) | bool
       block:
         - name: Pull current Apps Store integration tools
           ansible.builtin.git:
