@@ -1,0 +1,235 @@
+---
+- name: Pull and deploy Epa Spirit of Oro-Ago
+  hosts: epa_servers
+  become: true
+  gather_facts: true
+  serial: 1
+  vars:
+    epa_domain: epafestival.africandroid.world
+    epa_repo: https://github.com/olamidebello/epafestival-.git
+    epa_ref: main
+    epa_base: /opt/epa-festival
+    epa_nginx_config: /etc/nginx/conf.d/epa-festival.conf
+    epa_tls: false
+    epa_certificate: /etc/letsencrypt/live/{{ epa_domain }}/fullchain.pem
+    epa_certificate_key: /etc/letsencrypt/live/{{ epa_domain }}/privkey.pem
+  tasks:
+    - name: Validate target and variables
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == 'Debian'
+          - epa_domain is match('^[a-zA-Z0-9][a-zA-Z0-9.-]+$')
+          - epa_base is match('^/opt/[a-zA-Z0-9_-]+$')
+          - epa_nginx_config == '/etc/nginx/conf.d/epa-festival.conf'
+        fail_msg: This playbook supports Debian and Ubuntu with a dedicated Nginx configuration.
+
+    - name: Install runtime tools
+      ansible.builtin.apt:
+        name: [git, nginx, ca-certificates]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Inspect current Nginx configuration
+      ansible.builtin.command: nginx -T
+      register: nginx_dump
+      changed_when: false
+
+    - name: Inspect managed configuration
+      ansible.builtin.stat:
+        path: '{{ epa_nginx_config }}'
+      register: config_stat
+
+    - name: Read existing managed configuration
+      ansible.builtin.slurp:
+        src: '{{ epa_nginx_config }}'
+      when: config_stat.stat.exists
+      register: previous_config
+
+    - name: Refuse to replace an unrelated configuration
+      ansible.builtin.assert:
+        that:
+          - not config_stat.stat.exists or 'Managed by Epa Festival Ansible' in (previous_config.content | default('') | b64decode)
+          - config_stat.stat.exists or epa_domain not in nginx_dump.stdout
+        fail_msg: A configuration already uses this domain or file. Resolve its panel/vhost ownership before deploying.
+
+    - name: Check TLS files when enabled
+      ansible.builtin.stat:
+        path: '{{ item }}'
+      loop: ['{{ epa_certificate }}', '{{ epa_certificate_key }}']
+      register: tls_files
+      when: epa_tls | bool
+
+    - name: Require provisioned TLS certificate
+      ansible.builtin.assert:
+        that: item.stat.exists
+        fail_msg: Provision the domain certificate through your panel before enabling epa_tls.
+      loop: '{{ tls_files.results }}'
+      when: epa_tls | bool
+
+    - name: Create application directories
+      ansible.builtin.file:
+        path: '{{ item }}'
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop: ['{{ epa_base }}', '{{ epa_base }}/releases']
+
+    - name: Pull requested Git revision
+      ansible.builtin.git:
+        repo: '{{ epa_repo }}'
+        dest: '{{ epa_base }}/source'
+        version: '{{ epa_ref }}'
+        update: true
+        force: false
+      register: checkout
+
+    - name: Set release directory
+      ansible.builtin.set_fact:
+        release_path: '{{ epa_base }}/releases/{{ checkout.after }}'
+
+    - name: Validate required game files
+      ansible.builtin.stat:
+        path: '{{ epa_base }}/source/dist/{{ item }}'
+      loop: [index.html, game.js, style.css, sw.js, manifest.json]
+      register: game_files
+
+    - name: Reject incomplete source
+      ansible.builtin.assert:
+        that:
+          - item.stat.exists
+          - item.stat.isreg
+      loop: '{{ game_files.results }}'
+
+    - name: Create immutable release directory
+      ansible.builtin.file:
+        path: '{{ release_path }}'
+        state: directory
+        mode: '0755'
+
+    - name: Stage game assets
+      ansible.builtin.copy:
+        src: '{{ epa_base }}/source/dist/'
+        dest: '{{ release_path }}/'
+        remote_src: true
+        owner: root
+        group: root
+        mode: 'u=rwX,go=rX'
+
+    - name: Inspect active release
+      ansible.builtin.stat:
+        path: '{{ epa_base }}/current'
+        follow: false
+      register: old_current
+
+    - name: Require managed release symlink
+      ansible.builtin.assert:
+        that: not old_current.stat.exists or old_current.stat.islnk | default(false)
+        fail_msg: The current path must be a symlink, not an existing directory.
+
+    - name: Activate and verify release with rollback
+      block:
+        - name: Render dedicated virtual host
+          ansible.builtin.template:
+            src: templates/nginx.conf.j2
+            dest: '{{ epa_nginx_config }}'
+            owner: root
+            group: root
+            mode: '0644'
+
+        - name: Validate Nginx before switching
+          ansible.builtin.command: nginx -t
+          changed_when: false
+
+        - name: Prepare release symlink
+          ansible.builtin.file:
+            src: '{{ release_path }}'
+            dest: '{{ epa_base }}/current.next'
+            state: link
+            force: true
+
+        - name: Atomically switch active release
+          ansible.builtin.command:
+            argv: [mv, -Tf, '{{ epa_base }}/current.next', '{{ epa_base }}/current']
+          changed_when: true
+
+        - name: Start Nginx
+          ansible.builtin.service:
+            name: nginx
+            state: started
+            enabled: true
+
+        - name: Reload virtual hosts
+          ansible.builtin.service:
+            name: nginx
+            state: reloaded
+
+        - name: Verify domain routing and served game
+          ansible.builtin.uri:
+            url: http://127.0.0.1/index.html
+            headers:
+              Host: '{{ epa_domain }}'
+            return_content: true
+            status_code: 200
+          register: health
+          retries: 3
+          delay: 2
+          until: health.status == 200
+
+        - name: Check exact release header and game content
+          ansible.builtin.assert:
+            that:
+              - health.x_epa_release == checkout.after
+              - "'Epa: Spirit of Oro-Ago' in health.content"
+
+      rescue:
+        - name: Restore previous release
+          ansible.builtin.file:
+            src: '{{ old_current.stat.lnk_source }}'
+            dest: '{{ epa_base }}/current.rollback'
+            state: link
+            force: true
+          when: old_current.stat.islnk | default(false)
+
+        - name: Atomically restore previous release
+          ansible.builtin.command:
+            argv: [mv, -Tf, '{{ epa_base }}/current.rollback', '{{ epa_base }}/current']
+          when: old_current.stat.islnk | default(false)
+          changed_when: true
+
+        - name: Remove first deployment symlink if no prior release existed
+          ansible.builtin.file:
+            path: '{{ epa_base }}/current'
+            state: absent
+          when: not old_current.stat.exists
+
+        - name: Restore previous virtual host
+          ansible.builtin.copy:
+            content: '{{ previous_config.content | b64decode }}'
+            dest: '{{ epa_nginx_config }}'
+            mode: '0644'
+          when: config_stat.stat.exists
+
+        - name: Remove first deployment virtual host
+          ansible.builtin.file:
+            path: '{{ epa_nginx_config }}'
+            state: absent
+          when: not config_stat.stat.exists
+
+        - name: Validate restored Nginx configuration
+          ansible.builtin.command: nginx -t
+          changed_when: false
+
+        - name: Reload restored configuration
+          ansible.builtin.service:
+            name: nginx
+            state: reloaded
+
+        - name: Report failed release
+          ansible.builtin.fail:
+            msg: Deployment verification failed. Previous release and virtual host were restored; inspect the failed task above.
+
+    - name: Report installed release
+      ansible.builtin.debug:
+        msg: 'Installed {{ checkout.after }} for {{ epa_domain }}. Existing releases are retained in {{ epa_base }}/releases. Verify external DNS and HTTPS separately.'
