@@ -13,3 +13,5 @@ html:has(body.reduce-motion){scroll-behavior:auto}
 [hidden]{display:none!important}
 
 .language-notice{background:#e9eddf;padding:12px 16px;font-size:12px;line-height:1.6;border-radius:6px;margin-top:20px}nav{flex-wrap:wrap}#language{font-size:11px}
+
+.language-picker{display:flex;align-items:center;gap:7px;font-size:11px;color:#203f35}.language-picker select{font-size:11px;min-height:44px;max-width:230px;padding:8px;background:#fffdf6}nav .language-picker{margin-left:4px}@media(max-width:800px){nav{gap:10px}.language-picker{flex-wrap:wrap}.language-picker select{max-width:210px}}
