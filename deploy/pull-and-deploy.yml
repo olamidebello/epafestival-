@@ -1,0 +1,4 @@
+---
+# Existing Olamidepanel host: pull source, deploy game, verify HTTPS, sync Epa listing.
+- name: Pull and deploy the complete Epa release
+  ansible.builtin.import_playbook: repair-olamidepanel.yml

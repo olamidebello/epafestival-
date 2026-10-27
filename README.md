@@ -27,7 +27,19 @@ The installable mobile web app supports compatible Android browsers, Safari home
 
 The repair playbook updates Epa's African Apps Store listing automatically if `africanappsstore.service` exists on the same host. Existing accounts and other catalog entries are preserved. Run it on the store host separately if the store is hosted elsewhere. The listing is an installable web app and provides no fabricated APK download.
 
-## Oro-Ago language workspace
-The Language menu offers English and an Oro-Ago option with an explicit English fallback while authentic local wording is pending. It exports a text template for community translation and accepts a local, text-only JSON pack with named, source-supplied review. No dialect wording is invented, standard Yoruba is not substituted, and file-declared review is not independently authenticated. Partial packs retain English for untranslated text; imported language files stay on the device. Reviewed cultural stories and pronunciation still require local speakers/custodians.
+## Ìgbómìnà (Oro-Ago) language workspace
+The Language menu offers English and an Ìgbómìnà (Oro-Ago) option with an explicit English fallback while authentic local wording is pending. It exports a text template for community translation and accepts a local, text-only JSON pack with named, source-supplied review. No dialect wording is invented, standard Yoruba is not substituted, and file-declared review is not independently authenticated. Partial packs retain English for untranslated text; imported language files stay on the device. Reviewed cultural stories and pronunciation still require local speakers/custodians.
 
-New guest sessions default to the Oro-Ago language selection. Explicit language choices are preserved. Until a reviewed community pack supplies translations, English is visibly identified as the fallback.
+New guest sessions default to the Ìgbómìnà (Oro-Ago) language selection. Explicit language choices are preserved. Until a reviewed community pack supplies translations, English is visibly identified as the fallback.
+
+## Pull and deploy on the server
+From any directory on the existing Olamidepanel host:
+
+```bash
+git -C /opt/epa-festival-deployer pull --ff-only
+bash /opt/epa-festival-deployer/scripts/pull-and-deploy.sh
+```
+
+The script delegates to the existing locked repair workflow: install required deployment tools, pull current source, stage public files, repair the Epa-only Nginx route, obtain/retain its HTTPS certificate, verify the game, and publish the Epa store listing if African Apps Store runs on the same host. Existing backups, rollback and diagnostics remain in effect. It does not invent missing Ìgbómìnà translations; the visible English fallback remains until reviewed local wording is supplied.
+
+For direct Ansible use, run `ansible-playbook -i deploy/inventory.ini deploy/pull-and-deploy.yml` from the repository. The default inventory runs locally, so execute it on the actual server or supply your SSH inventory.
