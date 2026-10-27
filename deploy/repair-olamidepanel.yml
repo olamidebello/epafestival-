@@ -82,12 +82,12 @@
             force: false
         - name: Update only Epa listing and its install button with backups
           ansible.builtin.command:
-            argv: [python3, /opt/epa-festival-store/source/tools/install_epa.py, --discover]
+            argv: [python3, /opt/epa-festival-store/source/tools/install_epa.py, --discover, --publish, --verify-public]
           register: epa_store_result
           changed_when: true
         - name: Verify Epa listing through public store API
           ansible.builtin.uri:
-            url: https://africanappsstore.space/api/hosted-apps
+            url: "https://africanappsstore.space/api/hosted-apps?epa_check={{ epa_source.after }}"
             return_content: true
             status_code: 200
             validate_certs: true
