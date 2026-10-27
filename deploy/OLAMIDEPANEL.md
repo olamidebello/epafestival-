@@ -101,3 +101,22 @@ Nginx reload acknowledgement can precede activation of new workers. The installe
 
 ### Explicit address listeners
 Olamidepanel may bind existing sites separately to loopback, public IPv4, Docker bridge addresses, and IPv6. A wildcard-only Epa vhost cannot participate in an address-specific hostname group. The installer now discovers existing literal port-80/443 listener groups from active HTTP vhosts and joins them for Epa, without inheriting another site's default_server, bind, or socket options. It does not edit the other vhosts. The report records `joined_listener_groups` for verification. Certificate requirements still apply: adding listeners does not issue an HTTPS certificate.
+
+## One-command HTTP + HTTPS repair
+
+A phone can open HTTPS even after a successful HTTP-only deployment. Without an Epa TLS vhost, another site's port-443 fallback may appear. Use the repair entry point:
+
+```bash
+git -C /opt/epa-festival-deployer pull --ff-only
+bash /opt/epa-festival-deployer/scripts/repair-olamidepanel.sh
+```
+
+This runs `deploy/repair-olamidepanel.yml`: refresh the public game and existing listener-group fixes, validate public A/AAAA addresses against local/panel addresses, test a dedicated ACME challenge file, obtain or renew a Let's Encrypt certificate using Certbot webroot mode, install a renewal hook, enable the existing Certbot timer, activate the certificate-backed game vhost, redirect HTTP to Epa HTTPS, and verify all nine public HTTPS game assets against release hashes. Other sites' certificates and routing files are not changed by Certbot because the Nginx plugin is not used.
+
+The challenge document root is `/var/www/epa-festival-acme`; it is deliberately separate from the immutable game release and is used across renewals. The hook is `/etc/letsencrypt/renewal-hooks/deploy/epa-festival-reload`. HTTPS results are saved in `/var/lib/epa-festival/https-report.json`; ordinary activation/rollback results remain in `/var/lib/epa-festival/report.json`.
+
+By running the repair you request certificate issuance and the script accepts the certificate authority's terms through Certbot. It uses `epa_acme_email` when supplied, otherwise the panel's configured ACME email. If neither exists it registers without an email; set `-e epa_acme_email=YOUR_EMAIL` to provide a real monitored address. No email address is guessed.
+
+The script cannot change registrar DNS, an upstream firewall or cached data in a visitor's browser. It rejects wrong public DNS, unreachable ACME validation, invalid certificates, wrong HTTPS hostnames and mismatched public game files rather than reporting success. A failed certificate step leaves the successfully deployed HTTP game in place. Existing activation snapshots and rollback still apply to the later TLS route activation. Certificate/account issuance itself is not rolled back. Public verification is performed from the server, so a separate device remains the final external check.
+
+After a successful HTTPS result, open exactly `https://epafestival.africandroid.world/`. If the phone retains Sprintforge from the previous fallback, close its old tab and reopen the address in a new private tab to test without that tab's cached page.

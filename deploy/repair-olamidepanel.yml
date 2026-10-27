@@ -1,0 +1,61 @@
+---
+- name: Refresh source and repair HTTP document roots and IP listener groups
+  ansible.builtin.import_playbook: olamidepanel.yml
+  vars:
+    epa_require_tls: false
+
+- name: Provision an Epa certificate without changing neighboring websites
+  hosts: epa_servers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Install certificate tooling
+      ansible.builtin.apt:
+        name: [certbot, openssl]
+        state: present
+    - name: Check public DNS and ACME document path then obtain or retain certificate
+      ansible.builtin.command:
+        argv: [python3, '{{ playbook_dir }}/olamidepanel/https.py']
+        stdin: "{{ {'mode': 'issue', 'email': epa_acme_email | default('')} | to_json }}"
+      register: epa_certificate_result
+      changed_when: false
+    - name: Create certificate renewal hook directory
+      ansible.builtin.file:
+        path: /etc/letsencrypt/renewal-hooks/deploy
+        state: directory
+        mode: '0755'
+    - name: Reload checked Nginx configuration after Epa certificate renewal
+      ansible.builtin.copy:
+        dest: /etc/letsencrypt/renewal-hooks/deploy/epa-festival-reload
+        mode: '0750'
+        content: |
+          #!/bin/sh
+          # Managed by Epa Festival Ansible
+          case " ${RENEWED_DOMAINS:-} " in
+            *" epafestival.africandroid.world "*) /usr/sbin/nginx -t && /bin/systemctl reload nginx ;;
+          esac
+    - name: Enable certificate renewal timer
+      ansible.builtin.systemd:
+        name: certbot.timer
+        state: started
+        enabled: true
+
+- name: Activate and verify Epa on HTTPS with its own certificate
+  ansible.builtin.import_playbook: olamidepanel.yml
+  vars:
+    epa_require_tls: true
+
+- name: Verify the public game rather than a fallback website
+  hosts: epa_servers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Verify certificate hostname and exact public HTTPS asset contents
+      ansible.builtin.command:
+        argv: [python3, '{{ playbook_dir }}/olamidepanel/https.py']
+        stdin: '{"mode":"verify"}'
+      register: epa_public_result
+      changed_when: false
+    - name: Show public HTTPS result
+      ansible.builtin.debug:
+        var: epa_public_result.stdout

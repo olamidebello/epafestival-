@@ -120,6 +120,7 @@ def render(root, revision, cert=None, listeners=None):
     add_header X-Epa-Release "{revision}" always;
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
+    location ^~ /.well-known/acme-challenge/ {{ root /var/www/epa-festival-acme; }}
     location ~ /\\. {{ deny all; }}
     location / {{ try_files $uri $uri/ =404; }}
     location ~* \\.(html|js|css|json)$ {{
@@ -137,7 +138,7 @@ server {{
 '''
     if cert:
         http+=f'''    location = /_epa_health {{ add_header X-Epa-Release "{revision}" always; return 200 "{revision}"; }}
-    location ^~ /.well-known/acme-challenge/ {{ root {root}; }}
+    location ^~ /.well-known/acme-challenge/ {{ root /var/www/epa-festival-acme; }}
     location / {{ return 301 https://{DOMAIN}$request_uri; }}
 }}
 server {{

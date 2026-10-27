@@ -19,3 +19,5 @@ The living 2D square adds movement, day/night/weather, character styling and sav
 
 ## Olamidepanel deployment
 Run `sudo bash scripts/deploy-olamidepanel.sh` from an updated checkout on the panel server. See [deployment paths and port handling](deploy/OLAMIDEPANEL.md). The dedicated playbook reuses existing domain certificates and coordinates with the panel publisher; it does not require a separate application port.
+
+For automatic HTTP/HTTPS routing and certificate repair on the existing panel server, run `bash scripts/repair-olamidepanel.sh` as root. See [repair documentation](deploy/OLAMIDEPANEL.md#one-command-http--https-repair) for DNS requirements and diagnostic reports.
