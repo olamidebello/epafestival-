@@ -39,3 +39,6 @@ The default certificate paths are `/etc/letsencrypt/live/epafestival.africandroi
 The server pulls main by default, stages `dist/` in a commit-specific release directory, validates Nginx, atomically switches the current symlink and verifies actual game content plus its commit header through a local request using the domain Host header. Activation/health failures restore the prior symlink and managed vhost. Failed source pulls leave the active release alone. Existing releases remain available; no automatic deletion is performed. System package installation is not rolled back.
 
 Syntax check: `ansible-playbook -i deploy/inventory.ini deploy/deploy.yml --syntax-check`. Run deployment during a suitable maintenance window. No live server deployment is performed merely by adding these files.
+
+## Olamidepanel server
+Use `deploy/olamidepanel.yml` and `scripts/deploy-olamidepanel.sh` instead of the generic playbook on an existing Olamidepanel server. See [OLAMIDEPANEL.md](OLAMIDEPANEL.md) for exact document paths, port handling, existing-vhost repair, publisher coordination, TLS and rollback diagnostics.

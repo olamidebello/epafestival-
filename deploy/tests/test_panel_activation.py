@@ -1,0 +1,41 @@
+import importlib.util
+from pathlib import Path
+import unittest
+
+spec=importlib.util.spec_from_file_location('activate',Path(__file__).parents[1]/'olamidepanel/activate.py')
+a=importlib.util.module_from_spec(spec);spec.loader.exec_module(a)
+
+class DomainRoutingTests(unittest.TestCase):
+    def test_preserve_neighbor_and_ignore_comments_and_quoted_braces(self):
+        neighbor='server { listen 80; server_name other.example; location / { return 200 "a { b }"; } }'
+        target='server { listen 80; server_name '+a.DOMAIN+'; root /wrong/path; }'
+        text='# server { server_name '+a.DOMAIN+'; }\n'+neighbor+'\n'+target
+        new,certs,roots,count=a.plan_file(text)
+        self.assertIn(neighbor,new)
+        self.assertNotIn('root /wrong/path;',new)
+        self.assertEqual(roots,['/wrong/path'])
+        self.assertEqual(count,1)
+    def test_both_http_and_https_and_certificate_paths(self):
+        text='server {listen 80;server_name '+a.DOMAIN+';} server {listen 443 ssl;server_name '+a.DOMAIN+';ssl_certificate /cert.pem;ssl_certificate_key /key.pem;}'
+        new,certs,roots,count=a.plan_file(text)
+        self.assertEqual(count,2)
+        self.assertEqual(certs,[('/cert.pem','/key.pem')])
+        self.assertNotIn('server_name',new)
+    def test_shared_domain_block_rejected(self):
+        with self.assertRaises(ValueError):a.plan_file('server {server_name '+a.DOMAIN+' other.example;}')
+    def test_custom_backend_listener_rejected(self):
+        with self.assertRaises(ValueError):a.plan_file('server {listen 8080;server_name '+a.DOMAIN+';}')
+    def test_wildcard_fallback_is_preserved(self):
+        text='server {listen 80;server_name *.africandroid.world;root /fallback;}'
+        self.assertEqual(a.plan_file(text)[0],text)
+    def test_certificate_render_keeps_port80_redirect_and_asset_root(self):
+        text=a.render('/opt/epa-festival/current','a'*40,('/cert.pem','/key.pem'))
+        self.assertIn('listen 80;',text);self.assertIn('listen 443 ssl;',text)
+        self.assertIn('return 301 https://'+a.DOMAIN+'$request_uri',text)
+        self.assertIn('root /opt/epa-festival/current;',text)
+        self.assertEqual(len(a.server_blocks(text)),2)
+    def test_nginx_variables_with_braces(self):
+        text='server {server_name '+a.DOMAIN+'; location / { proxy_set_header X ${variable}; }}'
+        self.assertEqual(a.plan_file(text)[3],1)
+
+if __name__=='__main__':unittest.main()

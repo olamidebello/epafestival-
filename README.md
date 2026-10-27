@@ -16,3 +16,6 @@ Player name, symbolic avatars, palette themes, timing difficulty, larger text, r
 
 ## Local creative expansion
 The living 2D square adds movement, day/night/weather, character styling and saved outfits, decoration placement and saved layouts, a layered rhythm composer, saved dance routines, fictional neighbor choices, badges, canvas photo export, key remapping and battery/audio/timing settings. Original generated brand assets are integrated; see BRANDING.md. Multiplayer, cloud services and administration remain unimplemented; ROADMAP.md records the boundary precisely.
+
+## Olamidepanel deployment
+Run `sudo bash scripts/deploy-olamidepanel.sh` from an updated checkout on the panel server. See [deployment paths and port handling](deploy/OLAMIDEPANEL.md). The dedicated playbook reuses existing domain certificates and coordinates with the panel publisher; it does not require a separate application port.

@@ -1,0 +1,78 @@
+---
+- name: Deploy Epa on existing Olamidepanel without application port conflicts
+  hosts: epa_servers
+  become: true
+  gather_facts: true
+  serial: 1
+  vars:
+    epa_repo: https://github.com/olamidebello/epafestival-.git
+    epa_ref: main
+    epa_panel_root: /opt/olamidepanel
+    epa_panel_owner: ''
+    epa_require_tls: false
+  tasks:
+    - name: Require Debian or Ubuntu
+      ansible.builtin.assert:
+        that: ansible_os_family == 'Debian'
+    - name: Check existing panel and Nginx runtime paths
+      ansible.builtin.stat:
+        path: '{{ item }}'
+      loop:
+        - '{{ epa_panel_root }}/panel/database.py'
+        - '{{ epa_panel_root }}/venv/bin/python'
+        - /etc/olamidepanel/database.json
+        - /etc/nginx/nginx.conf
+      register: panel_paths
+    - name: Require installed Olamidepanel
+      ansible.builtin.assert:
+        that: item.stat.exists
+        fail_msg: Run on the existing Olamidepanel server; this does not install or replace the panel.
+      loop: '{{ panel_paths.results }}'
+    - name: Ensure Git and CA certificates are installed
+      ansible.builtin.apt:
+        name: [git, ca-certificates, iproute2]
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+    - name: Create source and release parent
+      ansible.builtin.file:
+        path: '{{ item }}'
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop: [/opt/epa-festival, /opt/epa-festival/releases]
+    - name: Pull the selected GitHub revision
+      ansible.builtin.git:
+        repo: '{{ epa_repo }}'
+        dest: /opt/epa-festival/source
+        version: '{{ epa_ref }}'
+        force: false
+        update: true
+      register: epa_source
+    - name: Stage the exact revision
+      ansible.builtin.file:
+        path: '/opt/epa-festival/releases/{{ epa_source.after }}'
+        state: directory
+        mode: '0755'
+    - name: Copy all public documents and artwork into the release
+      ansible.builtin.copy:
+        src: /opt/epa-festival/source/dist/
+        dest: '/opt/epa-festival/releases/{{ epa_source.after }}/'
+        remote_src: true
+        mode: preserve
+    - name: Make public assets readable and directories traversable
+      ansible.builtin.command:
+        argv: [chmod, -R, 'u=rwX,go=rX', '/opt/epa-festival/releases/{{ epa_source.after }}']
+      changed_when: false
+    - name: Activate domain route with panel lock and automatic rollback
+      ansible.builtin.command:
+        argv:
+          - '{{ epa_panel_root }}/venv/bin/python'
+          - '{{ playbook_dir }}/olamidepanel/activate.py'
+        stdin: "{{ {'panel_root': epa_panel_root, 'panel_owner': epa_panel_owner, 'revision': epa_source.after, 'release': '/opt/epa-festival/releases/' + epa_source.after, 'require_tls': epa_require_tls | bool} | to_json }}"
+      register: epa_activation
+      changed_when: epa_activation.rc == 0
+    - name: Show deployment report and all important paths
+      ansible.builtin.debug:
+        var: epa_activation.stdout
