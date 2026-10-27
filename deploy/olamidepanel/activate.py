@@ -19,7 +19,7 @@ import urllib.request
 
 DOMAIN = 'epafestival.africandroid.world'
 TOKEN = re.compile(r'''\#[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\$\{[^}]*\}|[{};]|[^\s{};#]+''')
-ASSETS = ['install.html','install.js','assets/app-192.png','assets/app-512.png','assets/apple-touch-icon.png','terms.html','privacy.html','copyright.html','index.html','game.js','advanced.js','style.css','sw.js','manifest.json','assets/epa-logo.png','assets/festival-welcome.webp','assets/festival-evening.webp']
+ASSETS = ['language.js','install.html','install.js','assets/app-192.png','assets/app-512.png','assets/apple-touch-icon.png','terms.html','privacy.html','copyright.html','index.html','game.js','advanced.js','style.css','sw.js','manifest.json','assets/epa-logo.png','assets/festival-welcome.webp','assets/festival-evening.webp']
 
 
 def run(args, check=True):
