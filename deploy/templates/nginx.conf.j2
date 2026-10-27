@@ -1,0 +1,25 @@
+# Managed by Epa Festival Ansible
+server {
+    listen 80;
+    server_name {{ epa_domain }};
+    root {{ epa_base }}/current;
+    index index.html;
+{% if epa_tls | bool %}
+    listen 443 ssl;
+    ssl_certificate {{ epa_certificate }};
+    ssl_certificate_key {{ epa_certificate_key }};
+    ssl_protocols TLSv1.2 TLSv1.3;
+{% endif %}
+    add_header X-Epa-Release "{{ checkout.after }}" always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    location ~ /\. { deny all; }
+    location / { try_files $uri $uri/ =404; }
+    # Revalidate scripts and HTML so repeat visitors receive updates.
+    location ~* \.(html|js|css|json)$ {
+        add_header Cache-Control "no-cache" always;
+        add_header X-Epa-Release "{{ checkout.after }}" always;
+        add_header X-Content-Type-Options nosniff always;
+        try_files $uri =404;
+    }
+}
