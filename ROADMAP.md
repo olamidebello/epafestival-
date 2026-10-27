@@ -38,3 +38,17 @@ Core progression must be completable from a new guest save. Replaying cannot dup
 ## Hosting
 Requested destination: https://epafestival.africandroid.world
 The private Sites deployment is separate. Custom domain DNS/server integration remains unconfigured. No ownership or DNS change is implied by this specification.
+
+## Local creative expansion (implemented)
+The 2D canvas square now supports keyboard/touch walking and running, greetings/clapping, moving fictional residents, a crowd scaled to core quest progress, day/night cycle selection, clouds/rain, lantern palettes and reduced decorative motion. Players choose skin/hair/clothing colors, five hairstyles, three body silhouettes, invented patterns/accessories, five activity labels and up to five saved outfits. Roles are cosmetic labels, not separate skill trees.
+
+The square designer places, moves and removes four object types, with up to five device-saved layouts. The workshop provides a three-track/eight-step rhythm composer with tempo and three earnable synthesized sound sets. The dance studio saves up to eight movements and replays a simple 2D rehearsal. Neighbor conversations offer two responses and a one-time friendship reward; they do not constitute a complete branching narrative.
+
+Play settings include movement-key remapping, challenge speed, timing offset/calibration, volume, battery mode, weather, effects and name hiding in downloadable canvas photographs. Rhythm challenges include an Expert timing window, combo feedback and device best scores separated by difficulty (these are local records, not trustworthy competitive rankings).
+
+Brand assets include a generated drum/sun/community emblem and two original illustrated key artworks. The 3D-style key art is illustrative; the playable world is 2D. Advanced fields are included in backup/recovery, and core creative assets are cached by the service worker after first online use. Offline behavior, controllers and all devices still require broader acceptance testing.
+
+## Expanded specification still to implement
+True connected story branches and responsibilities; full 3D character animation and cloth physics; drum strike animation matched to individual player hits; natural motion blending and cinematic camera paths; adjustable camera and group photography; full performance recording with input replay; duet scoring and real synchronized teams; rotating event service/community goals; separate casual/competitive server rankings; challenge publishing and moderated creation gallery; subtitles/narration for reviewed content; full controller support; optional accounts/cloud-save recovery.
+
+Owner/moderator/event-organizer/cultural-reviewer dashboards must cover players, permissions, quests, events, translations, cultural review, shared creations, moderation reports, announcements, backups and audit history. Every online score and reward must be validated server-side. There is no live admin dashboard, multiplayer lobby, cloud save or reviewed Yoruba language pack in this static release.

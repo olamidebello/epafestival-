@@ -1,1 +1,16 @@
-{"name":"Epa: Spirit of Oro-Ago","short_name":"Epa Adventure","start_url":"./","display":"standalone","background_color":"#fbf6e9","theme_color":"#203f35"}
+{
+  "name": "Epa: Spirit of Oro-Ago",
+  "short_name": "Epa Adventure",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fbf6e9",
+  "theme_color": "#203f35",
+  "icons": [
+    {
+      "src": "assets/epa-logo.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

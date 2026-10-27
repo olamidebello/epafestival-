@@ -13,3 +13,6 @@ Characters, patterns, illustrations, and challenges are invented. Specific cultu
 
 ## Expanded first-release settings
 Player name, symbolic avatars, palette themes, timing difficulty, larger text, reduced motion, help, and JSON save backup/recovery are available under Player & settings. The service worker caches core assets for later offline solo visits. See ROADMAP.md for the expanded specification and implementation boundaries.
+
+## Local creative expansion
+The living 2D square adds movement, day/night/weather, character styling and saved outfits, decoration placement and saved layouts, a layered rhythm composer, saved dance routines, fictional neighbor choices, badges, canvas photo export, key remapping and battery/audio/timing settings. Original generated brand assets are integrated; see BRANDING.md. Multiplayer, cloud services and administration remain unimplemented; ROADMAP.md records the boundary precisely.
