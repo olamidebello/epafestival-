@@ -98,3 +98,6 @@ python3 -m unittest discover -s deploy/tests -v
 
 ### Reload readiness diagnostics
 Nginx reload acknowledgement can precede activation of new workers. The installer now retries named-route checks up to 20 times and still requires exact release headers and asset hashes. It verifies that the dedicated vhost is loaded by the active Nginx include configuration. On failure, `health.last_failure` records the HTTP status, redirect location, release header and expected/received hashes without logging page contents. A persistent mismatch still triggers rollback.
+
+### Explicit address listeners
+Olamidepanel may bind existing sites separately to loopback, public IPv4, Docker bridge addresses, and IPv6. A wildcard-only Epa vhost cannot participate in an address-specific hostname group. The installer now discovers existing literal port-80/443 listener groups from active HTTP vhosts and joins them for Epa, without inheriting another site's default_server, bind, or socket options. It does not edit the other vhosts. The report records `joined_listener_groups` for verification. Certificate requirements still apply: adding listeners does not issue an HTTPS certificate.

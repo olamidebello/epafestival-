@@ -71,4 +71,29 @@ class ReloadReadinessTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError,'received_sha256'):
             a.verify_assets(self.root,self.revision,False,diag,attempts=1,delay=0,fetch=fetch)
 
+
+
+class ExplicitListenerTests(unittest.TestCase):
+    def test_join_public_loopback_and_ipv6_groups_without_default_flags(self):
+        text="""server {
+          listen 80 default_server;
+          listen 127.0.0.1:80;
+          listen 154.16.170.86:80 bind;
+          listen [::]:80 default_server;
+          listen [::1]:80;
+          server_name sprintforge.netwizzard.tech;
+        } server {listen 127.0.0.1:443 ssl;server_name other.example;}
+          server {listen 8090;server_name panel.example;}"""
+        groups=a.listener_groups(text)
+        self.assertEqual(groups[80],['80','127.0.0.1:80','154.16.170.86:80','[::]:80','[::1]:80'])
+        out=a.render('/opt/epa-festival/current','a'*40,('/cert.pem','/key.pem'),groups)
+        self.assertIn('listen 154.16.170.86:80;',out)
+        self.assertIn('listen 127.0.0.1:443 ssl;',out)
+        self.assertNotIn('default_server',out)
+        self.assertNotIn('bind;',out)
+        self.assertNotIn('8090',out)
+    def test_literal_addresses_only_and_deduplicated(self):
+        text='server {listen 127.0.0.1:80;listen 127.0.0.1:80;listen hostname:80;listen unix:/tmp/sock;server_name example.org;}'
+        self.assertEqual(a.listener_groups(text)[80],['80','127.0.0.1:80'])
+
 if __name__=='__main__':unittest.main()

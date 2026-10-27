@@ -4,6 +4,7 @@ import contextlib
 import fcntl
 import hashlib
 import importlib.util
+import ipaddress
 import json
 import os
 from pathlib import Path
@@ -83,7 +84,37 @@ def plan_file(text, domain=DOMAIN):
     return text,certs,roots,len(changes)
 
 
-def render(root, revision, cert=None):
+def listener_groups(text):
+    """Join existing HTTP address groups; do not copy default/bind/socket options."""
+    groups={80:['80'],443:['443']}
+    for block in server_blocks(text):
+        if not any(d[0]=='server_name' for d in block['directives']):
+            continue
+        for d in block['directives']:
+            if d[0]!='listen' or len(d)<2:
+                continue
+            value=d[1]
+            if value in ('80','443'):
+                continue
+            try:
+                host,port=value.rsplit(':',1)
+                port=int(port)
+                if port not in groups:
+                    continue
+                if host in ('*','0.0.0.0'):
+                    value=str(port)
+                else:
+                    ipaddress.ip_address(host.strip('[]'))
+                if value not in groups[port]:groups[port].append(value)
+            except (ValueError,TypeError):
+                continue
+    return groups
+
+
+def render(root, revision, cert=None, listeners=None):
+    listeners=listeners or {80:["80"],443:["443"]}
+    http_listens="\n".join("    listen "+v+";" for v in listeners[80])
+    https_listens="\n".join("    listen "+v+" ssl;" for v in listeners[443])
     shared=f'''    root {root};
     index index.html;
     add_header X-Epa-Release "{revision}" always;
@@ -101,7 +132,7 @@ def render(root, revision, cert=None):
     # Loopback health checks use the same named vhost; browsers redirect to TLS when available.
     http=f'''# Managed by Epa Festival Ansible — Olamidepanel
 server {{
-    listen 80;
+{http_listens}
     server_name {DOMAIN};
 '''
     if cert:
@@ -110,7 +141,7 @@ server {{
     location / {{ return 301 https://{DOMAIN}$request_uri; }}
 }}
 server {{
-    listen 443 ssl;
+{https_listens}
     server_name {DOMAIN};
     ssl_certificate "{cert[0]}";
     ssl_certificate_key "{cert[1]}";
@@ -246,6 +277,8 @@ def main(config):
             atomic(backup/'panel-before.json',json.dumps({'domain':dict(existing) if existing else None,'website_request':dict(job) if job else None},default=str,indent=2),0o600)
             report['listeners']=run(['ss','-ltnp'],check=False).stdout
             dump=run(['nginx','-T']);combined=dump.stdout+'\n'+dump.stderr
+            listeners=listener_groups(dump.stdout)
+            report['joined_listener_groups']=listeners
             files=[]
             for name in re.findall(r'^# configuration file (.+):$',combined,re.M):
                 raw=Path(name);p=raw.resolve()
@@ -276,7 +309,7 @@ def main(config):
             if str(managed) not in originals:originals[str(managed)]=None
             for name in aliases:Path(name).unlink()
             for p,text in changes.items():atomic(p,text,modes.get(str(p),0o644))
-            atomic(managed,render(link,revision,cert))
+            atomic(managed,render(link,revision,cert,listeners))
             run(['nginx','-t'])
             applied_dump=run(['nginx','-T'])
             loaded_paths=re.findall(r'^# configuration file (.+):$',applied_dump.stdout+'\n'+applied_dump.stderr,re.M)
